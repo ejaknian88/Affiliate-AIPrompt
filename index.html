@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ejaknian Affiliate AI Prompt</title>
+  
+  <!-- CDN Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- CDN React & ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- CDN Babel (Untuk mengubah JSX di browser) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- CDN Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    
+    /* Animasi mengambang untuk bola cahaya (opsional) */
+    @keyframes float {
+      0% { transform: translateY(0px) scale(1); }
+      50% { transform: translateY(-20px) scale(1.05); }
+      100% { transform: translateY(0px) scale(1); }
+    }
+    .orb-1 { animation: float 12s ease-in-out infinite; }
+    .orb-2 { animation: float 15s ease-in-out infinite reverse; }
+    .orb-3 { animation: float 10s ease-in-out infinite 2s; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- KODE REACT APP KITA -->
+  <script type="text/babel">
+    const { useState } = React;
+
+    // 🔥 Komponen Helper untuk Icon di Google Apps Script
+    const Icon = ({ name, className }) => {
+      if (!window.lucide || !window.lucide.icons[name]) return null;
+      const svgString = window.lucide.icons[name].toSvg({ class: className });
+      return <span className="inline-flex items-center justify-center" dangerouslySetInnerHTML={{ __html: svgString }} />;
+    };
+
+    function App() {
+      const [step, setStep] = useState(1);
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [toast, setToast] = useState(null);
+      
+      const [formData, setFormData] = useState({
+        faceImage: null,
+        outfitImage: null,
+        gender: 'Perempuan',
+        category: 'Atasan',
+        setting: '',
+        vibe: '',
+        cameraLens: 'Auto (Default AI)'
+      });
+
+      const focusCategories = ['Atasan', 'Bawahan', 'Full Outfit', 'Hijab', 'Sepatu'];
+      
+      const settingSuggestions = [
+        'Pure white seamless studio', 
+        'Dark minimalist studio', 
+        'Urban street scene', 
+        'Aesthetic modern cafe',
+        'Cozy minimalist bedroom', 
+        'Luxury marble podium',    
+        'Sunny outdoor park'       
+      ];
+
+      const vibeSuggestions = [
+        'Soft diffused studio lighting', 
+        'Golden hour sunlight', 
+        'Cinematic dark & edgy', 
+        'Bright, airy and elegant',
+        'Warm vintage film look', 
+        'Clean and clinical',     
+        'Moody neon accents'      
+      ];
+
+      const cameraSuggestions = [
+        'Auto (Default AI)',
+        '85mm Portrait Lens',
+        '35mm Street Lens',
+        'Kodak Portra 400 Film',
+        'GoPro Wide Angle',
+        'Cinematic Drone Shot',
+        'Disposable Camera Flash'
+      ];
+
+      const handleNext = () => setStep(step + 1);
+      const handleBack = () => setStep(step - 1);
+      const handleReset = () => {
+        setStep(1);
+        setFormData({ faceImage: null, outfitImage: null, gender: 'Perempuan', category: 'Atasan', setting: '', vibe: '', cameraLens: 'Auto (Default AI)' });
+      };
+
+      const handleImageUpload = (e, type) => {
+        const file = e.target.files[0];
+        if (file) {
+          const imageUrl = URL.createObjectURL(file);
+          setFormData({ ...formData, [type]: imageUrl });
+        }
+      };
+
+      const handleRemoveImage = (e, type) => {
+        e.preventDefault();
+        setFormData({ ...formData, [type]: null });
+      };
+
+      const simulateGeminiGeneration = () => {
+        setIsGenerating(true);
+        setTimeout(() => {
+          setIsGenerating(false);
+          setStep(3);
+        }, 2000);
+      };
+
+      const copyToClipboard = (text, type) => {
+        const textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand('copy');
+          setToast({ type: 'success', message: `${type} berhasil disalin!` });
+          setTimeout(() => setToast(null), 3000);
+        } catch (err) {
+          setToast({ type: 'error', message: 'Gagal menyalin teks.' });
+          setTimeout(() => setToast(null), 3000);
+        }
+        document.body.removeChild(textArea);
+      };
+
+      const generateGeminiPoses = () => {
+        const { category, setting, vibe, cameraLens, gender, faceImage, outfitImage } = formData;
+        const prod = category.toLowerCase();
+        const set = setting || 'A fitting environment';
+        const vb = vibe || 'Neutral lighting';
+        
+        const faceRef = faceImage ? "[Gunakan referensi wajah terlampir]" : "";
+        const outfitRef = outfitImage ? "[Gunakan referensi outfit terlampir]" : "";
+
+        const camRef = (cameraLens && cameraLens !== 'Auto (Default AI)') 
+          ? `\nShot on ${cameraLens}, providing a distinct photographic style.` 
+          : "";
+
+        const templates = {
+          'Atasan': [
+            { name: "FULL BODY FRONT (SILUET UTAMA)", desc: "Keseluruhan bentuk dari depan", img: `Standing straight and looking into the camera.\nFull body front shot.`, vid: "Model stands still while the camera slowly zooms in, capturing the details." },
+            { name: "GAYA BEBAS 1 (VARIASI ORIGINAL)", desc: "Menyandar santai memamerkan atasan", img: `Tucking a strand of hair behind the ear while looking away.\nMedium shot, eye level.`, vid: "Model gently adjusts her hair, movements fluid and graceful." },
+            { name: "FULL BODY 45 DEGREE ANGLE", desc: "Siluet dari sudut 45 derajat", img: `Standing at a 45-degree angle to the camera.\nFull body shot at 45 degree angle.`, vid: "Camera pans slightly from side to front, showcasing the side profile." },
+            { name: "MEDIUM BACK SHOT", desc: "Fokus pada detail bagian belakang", img: `Viewed from the back from the waist up.\nMedium back shot.`, vid: "Model turns head slightly to the side, revealing profile while keeping back to camera." },
+            { name: "LOW ANGLE FULL BODY", desc: "Angle bawah untuk kesan tinggi dan elegan", img: `Looking down into the lens.\nLow angle full body shot.`, vid: "Camera moves upward from the ground, emphasizing the height of the model." },
+            { name: "HIGH ANGLE BIRD'S EYE", desc: "Menyorot area dada/bahu dari atas", img: `Looking up towards the camera.\nHigh angle shot from above, focusing on the collar and shoulders.`, vid: "Camera slowly tilts down from a high angle, focusing on the neckline details." },
+            { name: "ACTION WALKING FAST", desc: "Gerak natural kain saat berjalan", img: `Walking briskly towards the camera, clothes fluttering naturally.\nMedium full shot, action freeze.`, vid: "Slow-motion tracking shot of the model walking confidently, fabric flowing." },
+            { name: "MACRO FABRIC DETAIL", desc: "Fokus super dekat pada tekstur atasan", img: `Extreme close up on the torso.\nMacro photography focusing on the weave, texture, and stitching of the top.`, vid: "Macro lens slowly glides over the fabric, highlighting premium textures." }
+          ],
+          'Bawahan': [
+            { name: "FULL BODY FRONT (SILUET UTAMA)", desc: "Berjalan tegak menampilkan jatuhnya kain", img: `Walking confidently towards the camera.\nFull-body front shot.`, vid: "Camera tracks the character as they walk forward confidently." },
+            { name: "LOW ANGLE ACTION", desc: "Pose melangkah lebar", img: `Taking a confident wide step.\nLow-angle dynamic shot focusing heavily on the legs.`, vid: "Low camera angle tracking the legs as the character takes stylish steps." },
+            { name: "DETAIL WAIST & POCKET", desc: "Menyorot detail pinggang & saku", img: `Hands resting in pockets, shifting weight slightly.\nMedium-full shot.`, vid: "Character puts hands in pockets and shifts weight smoothly." },
+            { name: "SITTING CROSSED LEGS", desc: "Duduk santai menyilangkan kaki", img: `Sitting on a stylish ledge, legs crossed elegantly.\nMedium full shot.`, vid: "Character adjusts their seating position, extending their legs playfully." },
+            { name: "FULL BODY BACK WALK", desc: "Berjalan menjauh menyorot bagian belakang", img: `Walking away from the camera, looking back playfully.\nFull body shot from behind.`, vid: "Camera follows from behind as the character walks away gracefully." },
+            { name: "DYNAMIC KICK / STRIDE", desc: "Langkah ekstra panjang atau tendangan ringan", img: `One leg extended forward dynamically, mid-motion.\nAction shot, side angle.`, vid: "Slow-motion capture of a dynamic leg movement, showing how the fabric stretches." },
+            { name: "HIGH ANGLE LOOKING DOWN", desc: "Fokus presisi pada potongan bawah", img: `Camera looking down at the legs and shoes.\nHigh angle perspective from the waist down.`, vid: "POV style camera looking down as the model takes a few steps." },
+            { name: "WINDY FABRIC MOVEMENT", desc: "Siluet kain saat tertiup angin", img: `Standing elegantly as wind blows the fabric dramatically.\nFull body shot.`, vid: "Cinematic wind effect rippling through the pants/skirt material." }
+          ],
+          'Full Outfit': [
+            { name: "FULL BODY FRONT (SILUET UTAMA)", desc: "Keseluruhan jatuhnya kain", img: `Standing straight with a confident posture.\nFull-body front shot.`, vid: "Camera tracks the character as they walk forward confidently." },
+            { name: "DYNAMIC TWIRL", desc: "Pose memutar untuk efek dramatis", img: `Twirling gracefully, fabric flying dynamically in the air.\nAction shot, eye level.`, vid: "Character does a slow-motion twirl, the clothing flares out beautifully." },
+            { name: "CASUAL LIFESTYLE", desc: "Menyandar santai untuk kesan lifestyle", img: `Leaning casually against a structural prop.\nMedium full shot.`, vid: "Character leans against a surface, looking relaxed." },
+            { name: "FULL BODY 45 DEGREE", desc: "Menyorot siluet dari sudut 45 derajat", img: `Standing at a 45-degree angle to the camera.\nFull body shot.`, vid: "Camera arcs slowly around the subject, capturing multiple angles." },
+            { name: "LOW ANGLE POWER POSE", desc: "Kesan fashion editorial / majalah", img: `Looking down fiercely into the lens.\nLow angle full body shot.`, vid: "Slow push-in from a low angle, emphasizing the majestic silhouette." },
+            { name: "HIGH FASHION EDITORIAL", desc: "Pose tangan & kaki asimetris artistik", img: `Striking an asymmetrical, high-fashion editorial pose with bold angles.\nFull body fashion shot.`, vid: "Quick cinematic cuts of the model striking three different high-fashion poses." },
+            { name: "SUNSET SILHOUETTE", desc: "Backlight menyorot garis pinggir baju", img: `Walking towards the sun, creating a glowing rim light around the outfit.\nCinematic backlight shot.`, vid: "Sunlight flares into the lens as the model walks gracefully into the light." },
+            { name: "SITTING ELEGANTLY ON STAIRS", desc: "Duduk mengatur komposisi kain", img: `Sitting asymmetrically on steps, limbs relaxed, outfit draped naturally.\nMedium wide shot.`, vid: "Model sits down gracefully, letting the full outfit drape naturally over the steps." }
+          ],
+          'Sepatu': [
+            { name: "ACTION STEPPING", desc: "Pose melangkah, fokus tajam pada sepatu", img: `Taking a confident step forward.\nLow-angle dynamic shot focusing heavily on the shoes.`, vid: "Low camera angle tracking the feet as the character takes a few stylish steps." },
+            { name: "MACRO DETAIL TIE", desc: "Berjongkok mengikat tali sepatu", img: `Crouching down adjusting the shoes.\nClose up macro shot on the shoe details.`, vid: "Close-up cinematic video of hands adjusting the shoe laces or straps." },
+            { name: "CROSSED LEGS SITTING", desc: "Duduk menyilangkan kaki ke depan", img: `Sitting with legs extended and crossed at the ankles.\nMedium close up on lower body.`, vid: "Character sits down and extends their legs playfully towards the camera." },
+            { name: "MID-AIR JUMP", desc: "Melompat, menyorot sol dan desain", img: `Suspended mid-air in a stylish jump.\nAction photography, maximum focus on footwear.`, vid: "Slow-motion clip of the character jumping, freezing at the peak to showcase the shoes." },
+            { name: "SHOE IN HAND LIFESTYLE", desc: "Memegang dan memamerkan sepatu", img: `Holding one shoe up close to the camera, smiling proudly.\nMedium shot.`, vid: "Character holds the shoe, rotating it slowly to show different angles." },
+            { name: "BIRD'S EYE VIEW STANDING", desc: "Melihat sepatu dari sudut pandang pemakai", img: `Looking straight down at the feet from above.\nPOV high angle shot focusing entirely on the shoes.`, vid: "POV shot looking down at the feet while taking a few casual steps." },
+            { name: "RUNNING MOTION BLUR", desc: "Fokus tajam pada sepatu dengan background blur", img: `Foot striking the ground mid-run.\nHigh-speed photography, sharp shoes with motion blur background.`, vid: "Fast-paced tracking shot alongside the shoes during a quick jog." },
+            { name: "REFLECTION PUDDLE", desc: "Pantulan elegan di permukaan air/kaca", img: `Standing near a shallow reflective puddle/glass surface.\nLow angle shot capturing the shoe and its crisp reflection.`, vid: "Camera pans slowly near the ground, revealing the shoe's elegant reflection." }
+          ],
+          'Hijab': [
+            { name: "ELEGANT DRAPE FRONT", desc: "Fokus pada juntaian hijab dari depan", img: `Standing elegantly, soft fabric folds framing the face.\nPortrait shot, eye level.`, vid: "Character stands elegantly, a soft breeze gently moving the hijab fabric." },
+            { name: "ADJUSTING EDGE", desc: "Tangan merapikan ujung jilbab", img: `Gently adjusting the edge of the hijab near the cheek.\nMedium close-up.`, vid: "Slow motion of the character gracefully pinning or adjusting their hijab while smiling." },
+            { name: "WINDY FLOW PROFILE", desc: "Efek angin menerpa jilbab dari samping", img: `Looking away, gentle wind blowing the hijab slightly backward.\nSide profile portrait.`, vid: "Cinematic breeze moves the hijab as the character looks thoughtfully into the distance." },
+            { name: "OVER THE SHOULDER", desc: "Menoleh ke belakang memamerkan cutting", img: `Looking over the shoulder, showing how the hijab falls gracefully on the back.\nMedium back shot.`, vid: "Camera glides from back to front, showing the hijab's full volume." },
+            { name: "MACRO TEXTURE DETAIL", desc: "Fokus pada material jilbab", img: `Looking directly at the lens.\nMacro close up on the face and hijab material showcasing the weave.`, vid: "Extreme close-up on the face, panning slightly to show the intricate texture of the fabric." },
+            { name: "SUNGLARE LOOKING UP", desc: "Mendongak dengan cahaya matahari (Glow)", img: `Looking slightly upwards towards the sun, soft glowing light on the face and hijab.\nPortrait shot, golden hour flare.`, vid: "Model tilts head up towards the light, creating a beautiful sun flare over the hijab." },
+            { name: "CAFE LIFESTYLE READING", desc: "Kesan natural sehari-hari (Candid)", img: `Looking down at a book or coffee cup, relaxed lifestyle posture.\nCandid medium shot.`, vid: "Model casually sips coffee or reads, showing how the hijab looks in a natural setting." },
+            { name: "WALKING CONFIDENTLY", desc: "Hijab flow saat berjalan cepat", img: `Striding confidently forward, the hijab flowing smoothly behind.\nDynamic full body tracking shot.`, vid: "Smooth gimbal tracking shot moving backward as the model walks purposefully forward." }
+          ]
+        };
+
+        const selectedPoses = templates[category] || templates['Full Outfit'];
+        const genderStr = gender.toLowerCase() === 'laki-laki' ? 'male' : 'female';
+
+        return selectedPoses.map(pose => ({
+          name: pose.name,
+          description: pose.desc,
+          imagePrompt: `Ultra-realistic fashion photography, vertical 9:16.\n\nA ${genderStr} model wearing a highly detailed ${prod}. ${faceRef} ${outfitRef}\n${pose.img}\n\n${set}.\n${vb}.${camRef}\n\nConfident and chic. Focus on clothing texture.`,
+          videoPrompt: `${pose.vid}`
+        }));
+      };
+
+      const generatedResults = generateGeminiPoses();
+
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-white to-pink-100 text-slate-800 font-sans relative overflow-hidden selection:bg-indigo-200">
+          
+          {/* 🔥 LUXURY MESH GRADIENT BACKGROUND 🔥 */}
+          <div className="fixed top-0 left-0 w-full h-full overflow-hidden pointer-events-none z-0">
+            <div className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-indigo-400/30 blur-[120px] orb-1"></div>
+            <div className="absolute top-[20%] right-[-10%] w-[40vw] h-[40vw] rounded-full bg-pink-400/30 blur-[100px] orb-2"></div>
+            <div className="absolute bottom-[-20%] left-[20%] w-[60vw] h-[60vw] rounded-full bg-purple-400/30 blur-[120px] orb-3"></div>
+          </div>
+
+          <div className="relative z-10 flex flex-col items-center p-4 md:p-10 pb-20 min-h-screen">
+            
+            {toast && (
+              <div className="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 transition-all duration-300">
+                <div className="bg-white/90 backdrop-blur-md rounded-xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] border border-white flex items-center p-4 gap-4 w-auto min-w-[300px]">
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${toast.type === 'success' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    <Icon name="checkCircle" className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-sm">{toast.type === 'success' ? 'Sukses!' : 'Oops!'}</h4>
+                    <p className="text-slate-600 text-xs">{toast.message}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* HEADER MEWAH */}
+            {step < 3 && (
+              <header className="mb-12 text-center w-full max-w-4xl relative z-10 mt-4">
+                <div className="inline-flex items-center justify-center gap-3 px-8 py-3.5 bg-white/60 backdrop-blur-xl border border-white/80 shadow-[0_8px_30px_rgb(0,0,0,0.04)] rounded-full mb-6 transition-all hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)]">
+                  <Icon name="sparkles" className="w-6 h-6 text-indigo-600 drop-shadow-sm" />
+                  <h1 className="text-2xl md:text-3xl font-black bg-clip-text text-transparent bg-gradient-to-r from-indigo-700 via-purple-600 to-pink-500 tracking-tight drop-shadow-sm">
+                    Ejaknian Affiliate AI Prompt
+                  </h1>
+                </div>
+                <p className="text-slate-600/90 font-medium text-sm md:text-base max-w-lg mx-auto leading-relaxed">
+                  Generator AI canggih untuk menciptakan pose dan gaya outfit affiliate kelas atas.
+                </p>
+              </header>
+            )}
+
+            <div className="w-full max-w-4xl relative z-10">
+              
+              {/* STEP 1: LUXURY CARD */}
+              {step === 1 && (
+                <div className="bg-white/70 backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 shadow-[0_15px_50px_rgba(0,0,0,0.05)] border border-white/80 animate-in fade-in slide-in-from-bottom-6 duration-700">
+                  <div className="text-center mb-10">
+                    <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-3 tracking-tight">Langkah 1: Unggah Referensi</h2>
+                    <p className="text-slate-500 text-sm md:text-base">Mulai dengan mengunggah gambar wajah dan outfit produk Anda.</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+                    
+                    {/* BOX UPLOAD WAJAH - ELEGAN */}
+                    <label className="relative border-2 border-dashed border-indigo-200/80 bg-white/40 backdrop-blur-sm rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:bg-indigo-50/50 hover:border-indigo-300 transition-all duration-300 cursor-pointer group h-[280px] overflow-hidden shadow-sm hover:shadow-md">
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'faceImage')} />
+                      {formData.faceImage ? (
+                        <>
+                          <img src={formData.faceImage} alt="Wajah" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-500" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-indigo-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          <div className="relative z-10 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-lg flex flex-col items-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                            <Icon name="checkCircle" className="w-7 h-7 text-indigo-600 mb-2" />
+                            <span className="text-sm font-bold text-slate-800 mb-3">Wajah Tersimpan</span>
+                            <button onClick={(e) => handleRemoveImage(e, 'faceImage')} className="text-xs px-4 py-1.5 bg-red-50 text-red-600 rounded-full font-bold hover:bg-red-100 transition-colors">Ganti Foto</button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-20 h-20 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-full flex items-center justify-center mb-5 text-indigo-500 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                            <Icon name="camera" className="w-10 h-10" />
+                          </div>
+                          <h3 className="font-bold text-indigo-800 text-lg mb-1">Unggah Wajah</h3>
+                          <p className="text-xs text-indigo-500/80 font-medium">Klik atau seret gambar ke sini</p>
+                        </>
+                      )}
+                    </label>
+
+                    {/* BOX UPLOAD OUTFIT - ELEGAN */}
+                    <label className="relative border-2 border-dashed border-pink-200/80 bg-white/40 backdrop-blur-sm rounded-3xl p-8 flex flex-col items-center justify-center text-center hover:bg-pink-50/50 hover:border-pink-300 transition-all duration-300 cursor-pointer group h-[280px] overflow-hidden shadow-sm hover:shadow-md">
+                      <input type="file" accept="image/*" className="hidden" onChange={(e) => handleImageUpload(e, 'outfitImage')} />
+                      {formData.outfitImage ? (
+                        <>
+                          <img src={formData.outfitImage} alt="Outfit" className="absolute inset-0 w-full h-full object-cover opacity-60 mix-blend-luminosity group-hover:mix-blend-normal transition-all duration-500" />
+                          <div className="absolute inset-0 bg-gradient-to-t from-pink-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                          <div className="relative z-10 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-lg flex flex-col items-center transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+                            <Icon name="checkCircle" className="w-7 h-7 text-pink-600 mb-2" />
+                            <span className="text-sm font-bold text-slate-800 mb-3">Outfit Tersimpan</span>
+                            <button onClick={(e) => handleRemoveImage(e, 'outfitImage')} className="text-xs px-4 py-1.5 bg-red-50 text-red-600 rounded-full font-bold hover:bg-red-100 transition-colors">Ganti Foto</button>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-20 h-20 bg-gradient-to-br from-pink-50 to-pink-100 rounded-full flex items-center justify-center mb-5 text-pink-500 group-hover:scale-110 transition-transform duration-500 shadow-inner">
+                            <Icon name="image" className="w-10 h-10" />
+                          </div>
+                          <h3 className="font-bold text-pink-800 text-lg mb-1">Unggah Baju / Outfit</h3>
+                          <p className="text-xs text-pink-500/80 font-medium">Klik atau seret gambar ke sini</p>
+                        </>
+                      )}
+                    </label>
+                  </div>
+
+                  {/* TOMBOL SELANJUTNYA - ELEGAN */}
+                  <button 
+                    onClick={handleNext}
+                    className={`w-full py-4 rounded-2xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${
+                      formData.faceImage || formData.outfitImage 
+                      ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white hover:from-indigo-700 hover:to-indigo-600 shadow-[0_8px_20px_rgba(79,70,229,0.3)] transform hover:-translate-y-0.5' 
+                      : 'bg-white border border-slate-200 text-slate-400 cursor-not-allowed shadow-sm'
+                    }`}
+                  >
+                    Lanjutkan <Icon name="chevronRight" className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+
+              {/* STEP 2: LUXURY CARD */}
+              {step === 2 && (
+                <div className="bg-white/80 backdrop-blur-2xl rounded-[2.5rem] p-8 md:p-12 shadow-[0_15px_50px_rgba(0,0,0,0.05)] border border-white/80 animate-in fade-in slide-in-from-right-8 duration-500">
+                  <div className="text-center mb-10">
+                    <h2 className="text-2xl md:text-3xl font-bold text-slate-800 mb-2 tracking-tight">Langkah 2: Detail Promosi</h2>
+                    <p className="text-slate-500">Sesuaikan parameter untuk hasil AI yang maksimal.</p>
+                  </div>
+                  
+                  <div className="border border-slate-100/80 rounded-3xl p-6 md:p-8 space-y-8 bg-white/40 shadow-sm backdrop-blur-sm">
+                    
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
+                        <Icon name="user" className="w-4 h-4 text-indigo-500" /> Gender Karakter
+                      </label>
+                      <div className="flex bg-white rounded-2xl border border-slate-200/80 overflow-hidden p-1.5 shadow-sm">
+                        {['Laki-Laki', 'Perempuan'].map(g => (
+                          <button
+                            key={g}
+                            onClick={() => setFormData({...formData, gender: g})}
+                            className={`flex-1 py-3 text-sm font-bold rounded-xl transition-all duration-300 ${formData.gender === g ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100/50' : 'text-slate-500 hover:bg-slate-50'}`}
+                          >
+                            {g}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-slate-700 mb-3">Fokus Utama Gambar (Jenis Outfit)</label>
+                      <div className="flex flex-wrap gap-2.5 mb-4">
+                        {focusCategories.map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => setFormData({...formData, category: cat})}
+                            className={`px-5 py-2.5 rounded-xl border text-sm font-bold transition-all duration-300 ${
+                              formData.category === cat 
+                              ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200/50' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-slate-50'
+                            }`}
+                          >
+                            {cat}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="bg-indigo-50/50 border border-indigo-100/50 rounded-xl p-3 flex items-start gap-3 text-indigo-700 text-sm">
+                        <Icon name="info" className="w-5 h-5 shrink-0 mt-0.5 text-indigo-500" />
+                        <p>Pose gambar otomatis dioptimalkan untuk 8 sudut terbaik memamerkan <span className="font-bold">{formData.category.toLowerCase()}</span>.</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
+                        <Icon name="mapPin" className="w-4 h-4 text-indigo-500" /> Dimana latarnya?
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="Ketik sendiri atau pilih di bawah..." 
+                        className="w-full p-4 bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none mb-4 text-sm text-slate-800 shadow-sm transition-all"
+                        value={formData.setting}
+                        onChange={(e) => setFormData({...formData, setting: e.target.value})}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        {settingSuggestions.map(sug => {
+                          const isActive = formData.setting === sug;
+                          return (
+                            <button 
+                              key={sug}
+                              onClick={() => setFormData({...formData, setting: sug})}
+                              className={`px-4 py-2 border rounded-full text-xs font-bold transition-all duration-300 shadow-sm ${
+                                isActive 
+                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              {sug}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="flex items-center gap-2 text-sm font-bold text-slate-700 mb-3">
+                        <Icon name="sunMedium" className="w-4 h-4 text-indigo-500" /> Vibe & Pencahayaan
+                      </label>
+                      <input 
+                        type="text" 
+                        placeholder="Ketik sendiri atau pilih di bawah..." 
+                        className="w-full p-4 bg-white/80 backdrop-blur-sm border border-slate-200/80 rounded-2xl focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-400 outline-none mb-4 text-sm text-slate-800 shadow-sm transition-all"
+                        value={formData.vibe}
+                        onChange={(e) => setFormData({...formData, vibe: e.target.value})}
+                      />
+                      <div className="flex flex-wrap gap-2">
+                        {vibeSuggestions.map(sug => {
+                          const isActive = formData.vibe === sug;
+                          return (
+                            <button 
+                              key={sug}
+                              onClick={() => setFormData({...formData, vibe: sug})}
+                              className={`px-4 py-2 border rounded-full text-xs font-bold transition-all duration-300 shadow-sm ${
+                                isActive 
+                                ? 'bg-indigo-50 border-indigo-500 text-indigo-700' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-indigo-300 hover:bg-slate-50'
+                              }`}
+                            >
+                              {sug}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="pt-6 border-t border-slate-200/60">
+                      <label className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-4">
+                        <Icon name="aperture" className="w-5 h-5 text-indigo-600" /> 
+                        Opsi Kamera & Lensa 
+                        <span className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-[10px] px-2.5 py-0.5 rounded-full ml-1 tracking-widest uppercase font-black shadow-sm">Pro</span>
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        {cameraSuggestions.map(sug => {
+                          const isActive = formData.cameraLens === sug;
+                          return (
+                            <button 
+                              key={sug}
+                              onClick={() => setFormData({...formData, cameraLens: sug})}
+                              className={`px-4 py-2 border rounded-full text-xs font-bold transition-all duration-300 shadow-sm ${
+                                isActive 
+                                ? 'bg-slate-800 border-slate-800 text-white shadow-md shadow-slate-300' 
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
+                              }`}
+                            >
+                              {sug}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 mt-10">
+                    <button 
+                      onClick={handleBack}
+                      disabled={isGenerating}
+                      className="px-8 py-4 bg-white border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 rounded-2xl transition-all shadow-sm disabled:opacity-50"
+                    >
+                      Kembali
+                    </button>
+                    <button 
+                      onClick={simulateGeminiGeneration}
+                      disabled={isGenerating || !formData.setting || !formData.vibe}
+                      className="flex-1 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-2 hover:from-indigo-700 hover:to-indigo-600 transition-all shadow-[0_8px_20px_rgba(79,70,229,0.3)] transform hover:-translate-y-0.5 disabled:opacity-50 disabled:shadow-none disabled:transform-none"
+                    >
+                      {isGenerating ? (
+                        <><Icon name="loader2" className="w-5 h-5 animate-spin" /> Sedang Memproses 8 Pose...</>
+                      ) : (
+                        <><Icon name="sparkles" className="w-5 h-5" /> Hasilkan Prompt</>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 3: LUXURY RESULT */}
+              {step === 3 && (
+                <div className="w-full animate-in fade-in slide-in-from-bottom-8 duration-700">
+                  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 pb-6 border-b border-slate-200/50 gap-4">
+                    <div>
+                      <h2 className="text-3xl font-black text-slate-800 tracking-tight">Hasil Generator Prompt</h2>
+                      <p className="text-slate-500 mt-2 text-sm flex items-center gap-2 font-medium">
+                        Fokus: <span className="font-bold text-indigo-700 bg-white shadow-sm border border-slate-100 px-2.5 py-0.5 rounded-md">{formData.category}</span>
+                        • Lensa: <span className="font-bold text-pink-700 bg-white shadow-sm border border-slate-100 px-2.5 py-0.5 rounded-md">{formData.cameraLens}</span>
+                      </p>
+                    </div>
+                    <button 
+                      onClick={handleReset} 
+                      className="flex items-center gap-2 px-6 py-3 bg-white text-slate-700 font-bold rounded-xl hover:bg-slate-50 transition-all shadow-sm text-sm border border-slate-200 hover:border-slate-300"
+                    >
+                      <Icon name="refreshCcw" className="w-4 h-4" /> Mulai Baru
+                    </button>
+                  </div>
+
+                  <div className="space-y-8">
+                    {generatedResults.map((result, idx) => (
+                      <div key={idx} className="bg-white/80 backdrop-blur-2xl rounded-[2rem] border border-white/80 overflow-hidden shadow-[0_10px_40px_rgba(0,0,0,0.04)] hover:shadow-[0_15px_50px_rgba(79,70,229,0.08)] transition-all duration-300 transform hover:-translate-y-1">
+                        
+                        <div className="bg-slate-50/50 px-6 sm:px-8 py-5 border-b border-slate-100/80 flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 shadow-md">
+                            {idx + 1}
+                          </div>
+                          <div className="flex flex-col">
+                            <h3 className="font-bold text-slate-800 uppercase tracking-widest text-sm">
+                              {result.name}
+                            </h3>
+                            <p className="text-xs text-slate-500 font-medium mt-0.5">{result.description}</p>
+                          </div>
+                        </div>
+
+                        <div className="p-6 sm:p-8 space-y-8">
+                          <div>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                              <div className="flex items-center gap-2 text-indigo-700 font-bold text-sm">
+                                <Icon name="image" className="w-5 h-5" /> Prompt Gambar
+                              </div>
+                              <button 
+                                onClick={() => copyToClipboard(result.imagePrompt, 'Prompt Gambar')}
+                                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-indigo-50 hover:text-indigo-700 hover:border-indigo-200 active:scale-95 transition-all shadow-sm"
+                              >
+                                <Icon name="copy" className="w-4 h-4" /> Salin Teks
+                              </button>
+                            </div>
+                            <div className="bg-indigo-50/30 border border-indigo-100/50 rounded-2xl p-6 text-[15px] text-slate-700 font-mono leading-relaxed whitespace-pre-wrap shadow-inner selection:bg-indigo-200">
+                              {result.imagePrompt}
+                            </div>
+                          </div>
+
+                          <div>
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-4">
+                              <div className="flex items-center gap-2 text-[#E11D48] font-bold text-sm">
+                                <Icon name="video" className="w-5 h-5" /> Prompt Video
+                              </div>
+                              <button 
+                                onClick={() => copyToClipboard(result.videoPrompt, 'Prompt Video')}
+                                className="flex items-center justify-center gap-2 px-5 py-2.5 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 active:scale-95 transition-all shadow-sm"
+                              >
+                                <Icon name="copy" className="w-4 h-4" /> Salin Teks
+                              </button>
+                            </div>
+                            <div className="bg-rose-50/30 border border-rose-100/50 rounded-2xl p-6 text-[15px] text-slate-700 font-mono leading-relaxed whitespace-pre-wrap shadow-inner selection:bg-rose-200">
+                              {result.videoPrompt}
+                            </div>
+                          </div>
+
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
